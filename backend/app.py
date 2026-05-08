@@ -170,7 +170,8 @@ app.add_middleware(
 
 @app.on_event("startup")
 def _on_startup() -> None:
-    startup_index()
+    # Lazy load - don't load model at startup to reduce memory
+    pass
 
 
 def extract_text_from_txt(raw: bytes) -> str:
@@ -572,8 +573,10 @@ async def check_plagiarism(
     elapsed_ms: str = Form("0"),
     behavior: str = Form("{}"),
 ) -> dict[str, Any]:
+    # Lazy load index on first request
+    global _faiss_index, _corpus_embeddings
     if _faiss_index is None or _corpus_embeddings is None:
-        raise HTTPException(status_code=503, detail="Index not ready")
+        _faiss_index, _corpus_embeddings = build_faiss_index()
 
     try:
         elapsed = float(elapsed_ms or "0")
